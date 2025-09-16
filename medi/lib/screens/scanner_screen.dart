@@ -1,4 +1,4 @@
-// scanner_screen.dart - Fixed overflow in Action Buttons
+// scanner_screen.dart - Updated with auto-navigation to CartScreen
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
@@ -9,6 +9,8 @@ import '../screens/cart_screen.dart';
 import '../screens/wishlist_screen.dart';
 import '../screens/profile_screen.dart';
 import '../widgets/navigation.dart';
+import '../services/api_service.dart'; // Add this import
+import '../models/medicine.dart'; // Add this import
 
 class ScannerScreen extends StatefulWidget {
   const ScannerScreen({super.key});
@@ -21,8 +23,7 @@ class _ScannerScreenState extends State<ScannerScreen>
     with TickerProviderStateMixin {
   File? _selectedImage;
   bool _isLoading = false;
-  List<Map<String, dynamic>> _medicines = [];
-  final String backendUrl = 'https://c6025561bd73.ngrok-free.app/analyze';
+  List<Medicine> _medicines = [];
   int _selectedIndex = 4; // Scanner doesn't have a nav item, so use unique index
 
   late AnimationController _fadeController;
@@ -79,35 +80,59 @@ class _ScannerScreenState extends State<ScannerScreen>
         _selectedImage = File(pickedFile.path);
         _medicines = [];
       });
-      await _sendImageToBackend(_selectedImage!);
+      // Automatically scan prescription after picking image
+      await _scanPrescription(_selectedImage!);
     }
   }
 
-  Future<void> _sendImageToBackend(File imageFile) async {
+  // New method using ApiService for prescription scanning
+  Future<void> _scanPrescription(File imageFile) async {
     setState(() {
       _isLoading = true;
     });
+    
     try {
-      var request = http.MultipartRequest('POST', Uri.parse(backendUrl));
-      request.files.add(
-        await http.MultipartFile.fromPath('image', imageFile.path),
-      );
-      var response = await request.send();
-      if (response.statusCode == 200) {
-        var respStr = await response.stream.bytesToString();
-        var data = json.decode(respStr);
+      // Use ApiService.scanPrescription instead of direct HTTP call
+      final scannedMedicines = await ApiService.scanPrescription(imageFile.path);
+      
+      if (scannedMedicines.isNotEmpty) {
+        // Store medicines in state for display
         setState(() {
-          _medicines = List<Map<String, dynamic>>.from(data['medicines'] ?? []);
+          _medicines = scannedMedicines;
+        });
+        
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("${scannedMedicines.length} medicines detected!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Auto-navigate to CartScreen with detected medicines
+        Future.delayed(const Duration(seconds: 1), () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CartScreen(medicines: scannedMedicines),
+            ),
+          );
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to analyze prescription.')),
+          const SnackBar(
+            content: Text("No medicines detected in prescription"),
+            backgroundColor: Colors.orange,
+          ),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       setState(() {
         _isLoading = false;
@@ -321,51 +346,79 @@ class _ScannerScreenState extends State<ScannerScreen>
                 },
               ),
               const SizedBox(height: 30),
-              if (_isLoading) const Center(child: CircularProgressIndicator()),
+              if (_isLoading) 
+                const Center(
+                  child: Column(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text(
+                        'Analyzing prescription...',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.deepPurple,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               if (_selectedImage != null && !_isLoading)
                 (_medicines.isNotEmpty)
                     ? Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Detected Medicines:',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.deepPurple,
-                            ),
+                          Row(
+                            children: [
+                              const Text(
+                                'Detected Medicines:',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.deepPurple,
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                'Redirecting to cart...',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.green[600],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 10),
                           ..._medicines.map(
                             (med) => Card(
-                              color: (med['price'] == 'outofstock' ||
-                                      med['quantity'] == 'outofstock')
+                              color: !med.isAvailable
                                   ? Colors.red[50]
                                   : Colors.green[50],
                               child: ListTile(
                                 title: Text(
-                                  med['name'] ?? '',
+                                  med.name,
                                   style: const TextStyle(
                                     color: Colors.deepPurple,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 subtitle: Text(
-                                  (med['quantity'] == 'outofstock')
+                                  !med.isAvailable
                                       ? 'Out of stock'
-                                      : 'Quantity: ${med['quantity']}',
+                                      : 'In Stock (${med.stockQuantity ?? 'Unknown'})',
                                   style: TextStyle(
-                                    color: (med['quantity'] == 'outofstock')
+                                    color: !med.isAvailable
                                         ? Colors.red
                                         : Colors.black,
                                   ),
                                 ),
                                 trailing: Text(
-                                  (med['price'] == 'outofstock')
+                                  !med.isAvailable
                                       ? 'Out of stock'
-                                      : '₹${med['price']}',
+                                      : '₹${med.price}',
                                   style: TextStyle(
-                                    color: (med['price'] == 'outofstock')
+                                    color: !med.isAvailable
                                         ? Colors.red
                                         : Colors.black,
                                     fontWeight: FontWeight.bold,
@@ -504,7 +557,7 @@ class _ActionButtonState extends State<_ActionButton>
           return Transform.scale(
             scale: _scaleAnimation.value,
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 15), // Removed horizontal padding
+              padding: const EdgeInsets.symmetric(vertical: 15),
               decoration: BoxDecoration(
                 color: widget.color,
                 borderRadius: BorderRadius.circular(12),

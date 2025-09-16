@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../models/medicine.dart';
-import '../models/cart_item.dart'; // Keep this import
+import '../models/cart_item.dart';
 import 'checkout_screen.dart';
 
 class CartScreen extends StatefulWidget {
-  const CartScreen({super.key});
+  final List<Medicine>? medicines; // Add this parameter for scanned medicines
+  
+  const CartScreen({super.key, this.medicines});
 
   @override
   State<CartScreen> createState() => _CartScreenState();
@@ -16,11 +18,53 @@ class _CartScreenState extends State<CartScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   double _totalAmount = 0.0;
+  bool _hasScannedMedicines = false;
 
   @override
   void initState() {
     super.initState();
-    _loadCartItems();
+    _hasScannedMedicines = widget.medicines != null && widget.medicines!.isNotEmpty;
+    
+    if (_hasScannedMedicines) {
+      _handleScannedMedicines();
+    } else {
+      _loadCartItems();
+    }
+  }
+
+  // Handle scanned medicines by adding them to cart
+  Future<void> _handleScannedMedicines() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Add all scanned medicines to cart
+      for (Medicine medicine in widget.medicines!) {
+        if (medicine.isAvailable) {
+          // FIX: Remove the quantity parameter to use default (quantity = 1)
+          await ApiService.addToCart(medicine.id);
+        }
+      }
+      
+      // Show success message
+      // FIX: Use isAvailable instead of !isOutOfStock
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${widget.medicines!.where((m) => m.isAvailable).length} medicines added to cart'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      
+      // Load the updated cart
+      await _loadCartItems();
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to add scanned medicines: $e';
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _loadCartItems() async {
@@ -138,9 +182,9 @@ class _CartScreenState extends State<CartScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
-          'Your Cart',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+        title: Text(
+          _hasScannedMedicines ? 'Scanned Medicines' : 'Your Cart',
+          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
         ),
         flexibleSpace: Container(
           decoration: const BoxDecoration(
@@ -176,10 +220,25 @@ class _CartScreenState extends State<CartScreen> {
   Widget _buildBody() {
     if (_isLoading) {
       return Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(
-            Color(0xFFE8B3FF),
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Color(0xFFE8B3FF),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _hasScannedMedicines 
+                ? 'Adding scanned medicines to cart...' 
+                : 'Loading cart...',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -238,6 +297,24 @@ class _CartScreenState extends State<CartScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    if (_hasScannedMedicines) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          'From Prescription Scan',
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 Container(
@@ -246,8 +323,8 @@ class _CartScreenState extends State<CartScreen> {
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
-                    Icons.shopping_cart,
+                  child: Icon(
+                    _hasScannedMedicines ? Icons.qr_code_scanner : Icons.shopping_cart,
                     color: Colors.black,
                     size: 28,
                   ),
@@ -267,7 +344,7 @@ class _CartScreenState extends State<CartScreen> {
             ),
           ),
           // Add bottom padding to prevent overlap with custom nav bar
-          const SizedBox(height: 120), // Increased padding for better visibility
+          const SizedBox(height: 120),
         ],
       ),
     );
@@ -432,7 +509,9 @@ class _CartScreenState extends State<CartScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Add some medicines to get started',
+            _hasScannedMedicines 
+              ? 'No medicines were added from the scan'
+              : 'Add some medicines to get started',
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey[500],
@@ -540,7 +619,7 @@ class _CartScreenState extends State<CartScreen> {
 
 Widget _buildCheckoutBar() {
   return Container(
-    margin: const EdgeInsets.only(bottom: 90), // 👈 push it UP above nav bar
+    margin: const EdgeInsets.only(bottom: 90), // push it UP above nav bar
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: const BorderRadius.only(
@@ -628,98 +707,6 @@ Widget _buildCheckoutBar() {
   );
 }
 
-
-
-  // Widget _buildCheckoutBar() {
-  //   return Container(
-  //     decoration: BoxDecoration(
-  //       color: Colors.white,
-  //       borderRadius: const BorderRadius.only(
-  //         topLeft: Radius.circular(25),
-  //         topRight: Radius.circular(25),
-  //       ),
-  //       boxShadow: [
-  //         BoxShadow(
-  //           color: Colors.black.withOpacity(0.1),
-  //           blurRadius: 20,
-  //           offset: const Offset(0, -5),
-  //         ),
-  //       ],
-  //     ),
-  //     padding: const EdgeInsets.all(20),
-  //     child: SafeArea(
-  //       child: Column(
-  //         mainAxisSize: MainAxisSize.min,
-  //         children: [
-  //           Row(
-  //             children: [
-  //               Expanded(
-  //                 child: Column(
-  //                   mainAxisSize: MainAxisSize.min,
-  //                   crossAxisAlignment: CrossAxisAlignment.start,
-  //                   children: [
-  //                     Text(
-  //                       'Total Amount',
-  //                       style: TextStyle(
-  //                         fontSize: 14,
-  //                         color: Colors.grey[600],
-  //                       ),
-  //                     ),
-  //                     Text(
-  //                       '₹${_totalAmount.toStringAsFixed(2)}',
-  //                       style: const TextStyle(
-  //                         fontSize: 24,
-  //                         fontWeight: FontWeight.bold,
-  //                         color: Colors.green,
-  //                       ),
-  //                     ),
-  //                   ],
-  //                 ),
-  //               ),
-  //               const SizedBox(width: 16),
-  //               Container(
-  //                 decoration: BoxDecoration(
-  //                   gradient: const LinearGradient(
-  //                     begin: Alignment.topLeft,
-  //                     end: Alignment.bottomRight,
-  //                     colors: [
-  //                       Color(0xFFE8B3FF),
-  //                       Color(0xFFF0C4FF),
-  //                       Colors.white,
-  //                     ],
-  //                   ),
-  //                   borderRadius: BorderRadius.circular(25),
-  //                 ),
-  //                 child: ElevatedButton(
-  //                   onPressed: _proceedToCheckout,
-  //                   style: ElevatedButton.styleFrom(
-  //                     backgroundColor: Colors.transparent,
-  //                     shadowColor: Colors.transparent,
-  //                     foregroundColor: Colors.black,
-  //                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-  //                     shape: RoundedRectangleBorder(
-  //                       borderRadius: BorderRadius.circular(25),
-  //                     ),
-  //                   ),
-  //                   child: const Text(
-  //                     'Checkout',
-  //                     style: TextStyle(
-  //                       fontSize: 16,
-  //                       fontWeight: FontWeight.w600,
-  //                     ),
-  //                   ),
-  //                 ),
-  //               ),
-  //             ],
-  //           ),
-  //           // Add bottom padding to prevent overlap with custom navigation bar
-  //           const SizedBox(height: 40), // Increased padding to lift checkout button higher
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
-
   void _showClearCartDialog() {
     showDialog(
       context: context,
@@ -748,5 +735,3 @@ Widget _buildCheckoutBar() {
     );
   }
 }
-
-// REMOVED: Local CartItem class - now using the one from models/cart_item.dart

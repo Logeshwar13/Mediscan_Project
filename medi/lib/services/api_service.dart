@@ -5,7 +5,7 @@ import '../models/user.dart';
 import '../models/order.dart';
 
 class ApiService {
-  static const String baseUrl = "https://3a298efea49a.ngrok-free.app/api";
+  static const String baseUrl = "https://a04b20c55cd6.ngrok-free.app/api";
 
   static String? _currentUserId;
   static String? _authToken;
@@ -251,6 +251,36 @@ static Future<Map<String, dynamic>?> getCurrentUserProfile() async {
       throw Exception("Remove from wishlist error: $e");
     }
   }
+
+  // In api_service.dart
+static Future<List<Medicine>> scanPrescription(String imagePath) async {
+  try {
+    var request = http.MultipartRequest(
+      "POST",
+      Uri.parse("$baseUrl/scan"),
+    );
+
+    request.files.add(await http.MultipartFile.fromPath("image", imagePath));
+
+    if (_authToken != null) {
+      request.headers['Authorization'] = 'Bearer $_authToken';
+    }
+
+    var response = await request.send();
+    var responseData = await response.stream.bytesToString();
+    final data = jsonDecode(responseData);
+
+    if (response.statusCode == 200 && data["success"] == true) {
+      final List medicines = data["medicines"];
+      return medicines.map((json) => Medicine.fromJson(json)).toList();
+    } else {
+      throw Exception(data["error"] ?? "Prescription scan failed");
+    }
+  } catch (e) {
+    throw Exception("Scan error: $e");
+  }
+}
+
 
   // ----------------- Cart Management -----------------
   static Future<void> addToCart(String medicineId, {int quantity = 1}) async {
