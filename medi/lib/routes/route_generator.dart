@@ -6,6 +6,7 @@ import '../screens/verification_page.dart';
 import '../screens/home_screen.dart';
 import '../screens/profile_screen.dart';
 import 'app_routes.dart';
+import '../widgets/navigation.dart';
 
 class RouteGenerator {
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -34,24 +35,32 @@ class RouteGenerator {
         );
       
       // Main App Routes
+      // case AppRoutes.home:
+      //   return MaterialPageRoute(
+      //     builder: (_) => const HomeScreen(),
+      //     // Scaffold(
+      //     //   body: Center(
+      //     //     child: Text('Home Page - Implement your home page here'),
+      //     //   ),
+      //     // ),
+      //     settings: settings,
+      //   );
       case AppRoutes.home:
-        return MaterialPageRoute(
-          builder: (_) => const HomeScreen(),
-          // Scaffold(
-          //   body: Center(
-          //     child: Text('Home Page - Implement your home page here'),
-          //   ),
-          // ),
-          settings: settings,
-        );
-      
+      return MaterialPageRoute(
+      builder: (_) => const NavigationWrapper(
+        child: HomeScreen(),
+       initialIndex: 0,
+    ),
+    settings: settings,
+  );
       case AppRoutes.profile:
         return MaterialPageRoute(
-          builder: (_) => const Scaffold(
-            body: Center(
-              child: Text('Profile Page - Implement your profile page here'),
-            ),
-          ),
+          builder: (_) => const ProfileScreen(),
+          // Scaffold(
+          //   body: Center(
+          //     child: Text('Profile Page - Implement your profile page here'),
+          //   ),
+          // ),
           settings: settings,
         );
       

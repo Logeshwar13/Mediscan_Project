@@ -76,7 +76,7 @@ class _AllProductsScreenState extends State<AllProductsScreen> {
           context,
           MaterialPageRoute(builder: (context) => const CartScreen()),
         );
-        break;
+        break;  
       case 2:
         Navigator.push(
           context,

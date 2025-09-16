@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
-import '../../services/api_service.dart';
-import '../../models/user.dart';
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
+import '../models/user.dart';
 import 'signup_page.dart';
-import 'home_screen.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -30,56 +28,67 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    
+    debugPrint('=== LOGIN ATTEMPT ===');
+    debugPrint('Email: $email');
+    debugPrint('Password length: ${password.length}');
+
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final result = await ApiService.login(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final result = await userProvider.login(email, password);
+      
+      debugPrint('Login result: $result');
 
       if (result['success']) {
-        final UserModel user = result['user'];
-        final String token = result['token'];
-        
-        // Store user data in SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_data', jsonEncode(user.toJson()));
-        await prefs.setString('auth_token', token);
-        await prefs.setString('user_id', user.id);
+        debugPrint('Login successful!');
+        debugPrint('User after login: ${userProvider.user?.name}');
+        debugPrint('Is logged in: ${userProvider.isLoggedIn}');
         
         // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Welcome back, ${user.name}!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Welcome back, ${userProvider.user?.name ?? 'User'}!'),
+              backgroundColor: Colors.green,
+            ),
+          );
 
-        // Navigate to home page
-        Navigator.pushReplacementNamed(context, '/home');
+          // Navigate to home page
+          Navigator.pushReplacementNamed(context, '/home');
+        }
       } else {
-        // Show error message
+        debugPrint('Login failed: ${result['error']}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['error'] ?? 'Login failed'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Login exception: $e');
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['error']),
+            content: Text('Login error: $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login failed: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -188,7 +197,7 @@ class _LoginPageState extends State<LoginPage> {
                     prefixIcon: const Icon(Icons.lock_outlined),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() {
@@ -218,7 +227,6 @@ class _LoginPageState extends State<LoginPage> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      // TODO: Implement forgot password
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Forgot password feature coming soon!'),
