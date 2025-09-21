@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../models/medicine.dart';
 import '../models/cart_item.dart';
+import '../providers/user_provider.dart';
 import 'checkout_screen.dart';
+import 'all_products_screen.dart';
 
 class CartScreen extends StatefulWidget {
   final List<Medicine>? medicines; // Add this parameter for scanned medicines
@@ -162,7 +165,8 @@ class _CartScreenState extends State<CartScreen> {
 
   void _proceedToCheckout() {
     if (_cartItems.isEmpty) {
-      _showErrorSnackBar('Your cart is empty');
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      _showErrorSnackBar(_getCartEmptySnackbarMessage(userProvider));
       return;
     }
 
@@ -177,43 +181,73 @@ class _CartScreenState extends State<CartScreen> {
     ).then((_) => _loadCartItems()); // Refresh cart after checkout
   }
 
+  String _getCartTitle(UserProvider userProvider) {
+    if (_hasScannedMedicines) {
+      return 'Scanned Medicines';
+    }
+    
+    if (userProvider.user != null && userProvider.user!.name.isNotEmpty) {
+      return "${userProvider.user!.name}'s Cart";
+    }
+    
+    return 'Your Cart';
+  }
+
+  String _getCartEmptyMessage(UserProvider userProvider) {
+    if (userProvider.user != null && userProvider.user!.name.isNotEmpty) {
+      return "${userProvider.user!.name}'s cart is empty!";
+    }
+    return 'Your cart is empty!';
+  }
+
+  String _getCartEmptySnackbarMessage(UserProvider userProvider) {
+    if (userProvider.user != null && userProvider.user!.name.isNotEmpty) {
+      return "${userProvider.user!.name}'s cart is empty";
+    }
+    return 'Your cart is empty';
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: Text(
-          _hasScannedMedicines ? 'Scanned Medicines' : 'Your Cart',
-          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
-        ),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFFE8B3FF),
-                Color(0xFFF0C4FF),
-                Colors.white,
-              ],
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, child) {
+        return Scaffold(
+          backgroundColor: Colors.grey[50],
+          appBar: AppBar(
+            title: Text(
+              _getCartTitle(userProvider),
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
             ),
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFFE8B3FF),
+                    Color(0xFFF0C4FF),
+                    Colors.white,
+                  ],
+                ),
+              ),
+            ),
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.black),
+              onPressed: () => Navigator.pop(context),
+            ),
+            actions: [
+              if (_cartItems.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.black),
+                  onPressed: () => _showClearCartDialog(),
+                ),
+            ],
           ),
-        ),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          if (_cartItems.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.black),
-              onPressed: () => _showClearCartDialog(),
-            ),
-        ],
-      ),
-      body: _buildBody(),
-      bottomNavigationBar: _cartItems.isNotEmpty ? _buildCheckoutBar() : null,
+          body: _buildBody(),
+          bottomNavigationBar: _cartItems.isNotEmpty ? _buildCheckoutBar() : null,
+        );
+      },
     );
   }
 
@@ -489,70 +523,84 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.shopping_cart_outlined,
-            size: 100,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Your cart is empty!',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _hasScannedMedicines 
-              ? 'No medicines were added from the scan'
-              : 'Add some medicines to get started',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[500],
-            ),
-          ),
-          const SizedBox(height: 32),
-          Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFFE8B3FF),
-                  Color(0xFFF0C4FF),
-                  Colors.white,
-                ],
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, child) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.shopping_cart_outlined,
+                size: 100,
+                color: Colors.grey[400],
               ),
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
+              const SizedBox(height: 24),
+              Text(
+                _getCartEmptyMessage(userProvider),
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[600],
                 ),
               ),
-              child: const Text(
-                'Continue Shopping',
+              const SizedBox(height: 8),
+              Text(
+                _hasScannedMedicines 
+                  ? 'No medicines were added from the scan'
+                  : 'Add some medicines to get started',
                 style: TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[500],
                 ),
               ),
+              const SizedBox(height: 32),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFFE8B3FF),
+                      Color(0xFFF0C4FF),
+                      Colors.white,
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child:ElevatedButton(
+        onPressed: () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AllProductsScreen(
+                medicines: [], // 🔹 pass your list of medicines here
+              ),
             ),
+          );
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          foregroundColor: Colors.black,
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25),
           ),
-        ],
-      ),
+        ),
+        child: const Text(
+          'Continue Shopping',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      )
+
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

@@ -139,7 +139,7 @@ class _ScannerScreenState extends State<ScannerScreen>
       });
     }
   }
-
+    
   void _navigateToHome() {
     Navigator.pushReplacement(
       context,

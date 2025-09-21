@@ -43,6 +43,17 @@ dependencies:
   image_picker: ^1.1.2
   geolocator: ^9.0.2
   geocoding: ^2.1.1
+  pdf: ^3.10.7
+  path_provider: ^2.1.1
+  share_plus: ^7.2.1
+  permission_handler: ^11.0.1
+  device_info_plus: ^9.1.0
+  url_launcher: ^6.2.1
+  
+  # Map dependencies
+  flutter_map: ^6.1.0
+  latlong2: 0.9.1
+  # google_maps_flutter: ^2.5.0
   # cloud_firestore: ^5.4.4
 
 dev_dependencies:
@@ -55,7 +66,12 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
-
+  flutter_launcher_icons: ^0.13.1   # 👈 added
+  
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/mediscan.png"  # 👈 your logo
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -74,6 +90,7 @@ flutter:
     - assets/paracetamol.png
     - assets/tablets.jpeg
     - assets/tablet_ban1.jpg
+    - assets/mediscan.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

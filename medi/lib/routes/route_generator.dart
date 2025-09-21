@@ -120,7 +120,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             SizedBox(height: 24),
             Text(
-              'MedCare',
+              'MediScan',
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,

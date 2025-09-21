@@ -118,7 +118,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'MedCare',
+                        'MediScan',
                         style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,

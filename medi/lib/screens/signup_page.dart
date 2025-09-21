@@ -141,7 +141,7 @@ class _SignupPageState extends State<SignupPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Sign up to get started with MedCare',
+                        'Sign up to get started with MediScan',
                         style: TextStyle(
                           fontSize: 16,
                           color: Colors.grey[600],

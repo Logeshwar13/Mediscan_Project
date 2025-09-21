@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:medi/screens/home_screen.dart';
 import '../models/order.dart';
 import '../widgets/navigation.dart';
+import '../services/receipt_service.dart';
+import '../providers/user_provider.dart';
+import 'order_tracking_screen.dart';
 
 class OrderConfirmationScreen extends StatelessWidget {
   final Order order;
@@ -17,102 +21,251 @@ class OrderConfirmationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: SafeArea(
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, child) {
+        final userName = userProvider.user?.name ?? 'Customer';
+        
+        return Scaffold(
+          backgroundColor: Colors.grey[50],
+          body: SafeArea(
+            child: Column(
+              children: [
+                // Success Header
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFF7B68EE),
+                        Color(0xFF9575FF),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(30),
+                      bottomRight: Radius.circular(30),
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 100,
+                        height: 100,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check,
+                          color: Color(0xFF7B68EE),
+                          size: 60,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Thank you, $userName!',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Your Order Has Been Placed Successfully',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Order ID: #${order.id.substring(0, 8).toUpperCase()}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Quick Actions Row
+                        _buildQuickActionsRow(context),
+                        
+                        const SizedBox(height: 20),
+                        
+                        // Customer Details Card
+                        _buildCustomerDetailsCard(userName),
+                        
+                        const SizedBox(height: 20),
+                        
+                        // Order Details Card
+                        _buildOrderDetailsCard(),
+                        
+                        const SizedBox(height: 20),
+                        
+                        // Delivery Details Card
+                        _buildDeliveryDetailsCard(),
+                        
+                        const SizedBox(height: 20),
+                        
+                        // Payment Details Card
+                        _buildPaymentDetailsCard(),
+                        
+                        const SizedBox(height: 20),
+                        
+                        // Order Items Card
+                        _buildOrderItemsCard(),
+                        
+                        const SizedBox(height: 30),
+                        
+                        // What's Next Section
+                        _buildWhatsNextCard(),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Bottom Actions
+                _buildBottomActions(context),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildQuickActionsRow(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildActionCard(
+            icon: Icons.receipt_long,
+            title: 'Download Receipt',
+            subtitle: 'Get PDF receipt',
+            color: Colors.blue,
+            onTap: () => _downloadReceipt(context),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildActionCard(
+            icon: Icons.track_changes,
+            title: 'Track Order',
+            subtitle: 'Live tracking',
+            color: Colors.green,
+            onTap: () => _trackOrder(context),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
         child: Column(
           children: [
-            // Success Header
             Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0xFF7B68EE),
-                    Color(0xFF9575FF),
-                  ],
-                ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
               ),
-              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-              child: Column(
-                children: [
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.check,
-                      color: Color(0xFF7B68EE),
-                      size: 60,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Order Placed Successfully!',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Order ID: #${order.id.substring(0, 8).toUpperCase()}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+              child: Icon(
+                icon,
+                color: color,
+                size: 24,
               ),
             ),
-
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Order Details Card
-                    _buildOrderDetailsCard(),
-                    
-                    const SizedBox(height: 20),
-                    
-                    // Delivery Details Card
-                    _buildDeliveryDetailsCard(),
-                    
-                    const SizedBox(height: 20),
-                    
-                    // Payment Details Card
-                    _buildPaymentDetailsCard(),
-                    
-                    const SizedBox(height: 20),
-                    
-                    // Order Items Card
-                    _buildOrderItemsCard(),
-                    
-                    const SizedBox(height: 30),
-                    
-                    // What's Next Section
-                    _buildWhatsNextCard(),
-                  ],
-                ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: color,
               ),
+              textAlign: TextAlign.center,
             ),
-
-            // Bottom Actions
-            _buildBottomActions(context),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCustomerDetailsCard(String userName) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.person, color: Color(0xFF7B68EE)),
+              const SizedBox(width: 8),
+              const Text(
+                'Customer Information',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildDetailRow('Customer Name', userName),
+        ],
       ),
     );
   }
@@ -196,6 +349,8 @@ class OrderConfirmationScreen extends StatelessWidget {
   }
 
   Widget _buildPaymentDetailsCard() {
+    final bool isPaid = paymentMethod.toLowerCase() != 'cash on delivery';
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -229,8 +384,9 @@ class OrderConfirmationScreen extends StatelessWidget {
           const SizedBox(height: 16),
           
           _buildDetailRow('Payment Method', paymentMethod),
-          _buildDetailRow('Payment Status', paymentMethod == 'Cash on Delivery' ? 'Pending' : 'Paid'),
-          if (paymentMethod == 'Cash on Delivery')
+          _buildDetailRow('Payment Status', isPaid ? 'Paid' : 'Pending (Cash on Delivery)'),
+          
+          if (!isPaid)
             Container(
               margin: const EdgeInsets.only(top: 12),
               padding: const EdgeInsets.all(12),
@@ -540,15 +696,7 @@ class OrderConfirmationScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      // Navigate to track order (you can implement this)
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Track order feature coming soon!'),
-                          backgroundColor: Color(0xFF7B68EE),
-                        ),
-                      );
-                    },
+                    onPressed: () => _trackOrder(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: const Color(0xFF7B68EE),
@@ -605,6 +753,66 @@ class OrderConfirmationScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _trackOrder(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => OrderTrackingScreen(order: order),
+      ),
+    );
+  }
+
+  void _downloadReceipt(BuildContext context) async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Generating receipt...'),
+            ],
+          ),
+        ),
+      );
+
+      // Generate and download receipt with context
+      await ReceiptService.generateAndDownloadReceipt(
+        context,
+        order, 
+        deliveryAddress, 
+        paymentMethod,
+      );
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Receipt downloaded successfully!'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      // Close loading dialog
+      Navigator.of(context).pop();
+      
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to download receipt: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   String _formatDate(DateTime date) {

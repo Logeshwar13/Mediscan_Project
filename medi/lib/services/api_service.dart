@@ -5,7 +5,7 @@ import '../models/user.dart';
 import '../models/order.dart';
 
 class ApiService {
-  static const String baseUrl = "https://a04b20c55cd6.ngrok-free.app/api";
+  static const String baseUrl = "https://9f3ad419f2a5.ngrok-free.app/api";
 
   static String? _currentUserId;
   static String? _authToken;
@@ -51,7 +51,7 @@ class ApiService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final user = UserModel.fromJson(data['user']);
-        
+
         if (data['token'] != null) {
           setCurrentUser(user.id, data['token']);
         }
@@ -60,23 +60,20 @@ class ApiService {
           'success': true,
           'user': user,
           'token': data['token'],
-          'message': data['message']
+          'message': data['message'],
         };
       } else {
-        return {
-          'success': false,
-          'error': data['error'] ?? "Signup failed"
-        };
+        return {'success': false, 'error': data['error'] ?? "Signup failed"};
       }
     } catch (e) {
-      return {
-        'success': false,
-        'error': "Network error: $e"
-      };
+      return {'success': false, 'error': "Network error: $e"};
     }
   }
 
-  static Future<Map<String, dynamic>> login(String email, String password) async {
+  static Future<Map<String, dynamic>> login(
+    String email,
+    String password,
+  ) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/login'),
@@ -88,7 +85,7 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final user = UserModel.fromJson(data['user']);
-        
+
         if (data['token'] != null) {
           setCurrentUser(user.id, data['token']);
         }
@@ -97,19 +94,13 @@ class ApiService {
           'success': true,
           'user': user,
           'token': data['token'],
-          'message': data['message'] ?? 'Login successful'
+          'message': data['message'] ?? 'Login successful',
         };
       } else {
-        return {
-          'success': false,
-          'error': data['error'] ?? "Login failed"
-        };
+        return {'success': false, 'error': data['error'] ?? "Login failed"};
       }
     } catch (e) {
-      return {
-        'success': false,
-        'error': "Network error: $e"
-      };
+      return {'success': false, 'error': "Network error: $e"};
     }
   }
 
@@ -120,21 +111,14 @@ class ApiService {
     String? address,
   }) async {
     if (_currentUserId == null || _authToken == null) {
-      return {
-        'success': false,
-        'error': "User not logged in"
-      };
+      return {'success': false, 'error': "User not logged in"};
     }
 
     try {
       final response = await http.put(
         Uri.parse('$baseUrl/auth/profile'),
         headers: _getAuthHeaders(),
-        body: jsonEncode({
-          'name': name,
-          'phone': phone,
-          'address': address,
-        }),
+        body: jsonEncode({'name': name, 'phone': phone, 'address': address}),
       );
 
       final data = jsonDecode(response.body);
@@ -144,52 +128,103 @@ class ApiService {
         return {
           'success': true,
           'user': user,
-          'message': data['message'] ?? 'Profile updated successfully'
+          'message': data['message'] ?? 'Profile updated successfully',
         };
       } else {
         return {
           'success': false,
-          'error': data['error'] ?? "Profile update failed"
+          'error': data['error'] ?? "Profile update failed",
         };
       }
     } catch (e) {
+      return {'success': false, 'error': "Network error: $e"};
+    }
+  }
+
+  // ----------------- Order Tracking -----------------
+  static Future<Map<String, dynamic>> getOrderTracking(String orderId) async {
+    if (_authToken == null) {
+      throw Exception("User not logged in");
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/order/tracking/$orderId'),
+        headers: _getAuthHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {
+          'success': true,
+          'currentLocationIndex': data['currentLocationIndex'] ?? 2,
+          'locationUpdates': data['locationUpdates'] ?? [
+            "Left MediCare Pharmacy",
+            "On Anna Salai Road", 
+            "Approaching T. Nagar",
+            "Near delivery area"
+          ],
+          'estimatedTime': data['estimatedTime'] ?? "15-20 minutes",
+          'deliveryPersonLocation': data['deliveryPersonLocation'] ?? {
+            'lat': 13.0827,
+            'lng': 80.2707
+          },
+          'deliveryPersonName': data['deliveryPersonName'] ?? "Rajesh Kumar",
+          'deliveryPersonPhone': data['deliveryPersonPhone'] ?? "+91 9786001567",
+          'deliveryPersonRating': data['deliveryPersonRating'] ?? 4.8,
+          'currentStatus': data['currentStatus'] ?? "Out for Delivery"
+        };
+      } else {
+        throw Exception("Failed to get order tracking");
+      }
+    } catch (e) {
+      // Return mock data if API fails
       return {
         'success': false,
-        'error': "Network error: $e"
+        'error': e.toString(),
+        'currentLocationIndex': 2,
+        'locationUpdates': [
+          "Left MediCare Pharmacy",
+          "On Anna Salai Road", 
+          "Approaching T. Nagar",
+          "Near delivery area"
+        ],
+        'estimatedTime': "15-20 minutes",
+        'deliveryPersonLocation': {
+          'lat': 13.0827,
+          'lng': 80.2707
+        },
+        'deliveryPersonName': "Rajesh Kumar",
+        'deliveryPersonPhone': "+91 9786001567", 
+        'deliveryPersonRating': 4.8,
+        'currentStatus': "Out for Delivery"
       };
     }
   }
 
-
-  
-
   // ----------------- Get Current User Profile -----------------
-static Future<Map<String, dynamic>?> getCurrentUserProfile() async {
-  if (_authToken == null) {
-    throw Exception("User not logged in");
-  }
-
-  try {
-    final response = await http.get(
-      Uri.parse('$baseUrl/auth/profile'),
-      headers: _getAuthHeaders(),
-    );
-
-    final data = jsonDecode(response.body);
-
-    if (response.statusCode == 200) {
-      return data['user']; // return user object (with phone, name, etc.)
-    } else {
-      throw Exception(data['error'] ?? "Failed to load profile");
+  static Future<Map<String, dynamic>?> getCurrentUserProfile() async {
+    if (_authToken == null) {
+      throw Exception("User not logged in");
     }
-  } catch (e) {
-    throw Exception("Profile fetch error: $e");
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/auth/profile'),
+        headers: _getAuthHeaders(),
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data['user']; // return user object (with phone, name, etc.)
+      } else {
+        throw Exception(data['error'] ?? "Failed to load profile");
+      }
+    } catch (e) {
+      throw Exception("Profile fetch error: $e");
+    }
   }
-}
-
-
-
-
 
   // ----------------- Medicines -----------------
   static Future<List<Medicine>> fetchMedicines() async {
@@ -229,9 +264,6 @@ static Future<Map<String, dynamic>?> getCurrentUserProfile() async {
     }
   }
 
-
-  // Add this method to your ApiService class (api_service.dart)
-
   static Future<void> removeFromWishlist(String medicineId) async {
     if (_currentUserId == null) {
       throw Exception("User not logged in");
@@ -252,35 +284,30 @@ static Future<Map<String, dynamic>?> getCurrentUserProfile() async {
     }
   }
 
-  // In api_service.dart
-static Future<List<Medicine>> scanPrescription(String imagePath) async {
-  try {
-    var request = http.MultipartRequest(
-      "POST",
-      Uri.parse("$baseUrl/scan"),
-    );
+  static Future<List<Medicine>> scanPrescription(String imagePath) async {
+    try {
+      var request = http.MultipartRequest("POST", Uri.parse("$baseUrl/scan"));
 
-    request.files.add(await http.MultipartFile.fromPath("image", imagePath));
+      request.files.add(await http.MultipartFile.fromPath("image", imagePath));
 
-    if (_authToken != null) {
-      request.headers['Authorization'] = 'Bearer $_authToken';
+      if (_authToken != null) {
+        request.headers['Authorization'] = 'Bearer $_authToken';
+      }
+
+      var response = await request.send();
+      var responseData = await response.stream.bytesToString();
+      final data = jsonDecode(responseData);
+
+      if (response.statusCode == 200 && data["success"] == true) {
+        final List medicines = data["medicines"];
+        return medicines.map((json) => Medicine.fromJson(json)).toList();
+      } else {
+        throw Exception(data["error"] ?? "Prescription scan failed");
+      }
+    } catch (e) {
+      throw Exception("Scan error: $e");
     }
-
-    var response = await request.send();
-    var responseData = await response.stream.bytesToString();
-    final data = jsonDecode(responseData);
-
-    if (response.statusCode == 200 && data["success"] == true) {
-      final List medicines = data["medicines"];
-      return medicines.map((json) => Medicine.fromJson(json)).toList();
-    } else {
-      throw Exception(data["error"] ?? "Prescription scan failed");
-    }
-  } catch (e) {
-    throw Exception("Scan error: $e");
   }
-}
-
 
   // ----------------- Cart Management -----------------
   static Future<void> addToCart(String medicineId, {int quantity = 1}) async {
@@ -467,10 +494,7 @@ static Future<List<Medicine>> scanPrescription(String imagePath) async {
   // ----------------- Get Profile -----------------
   static Future<Map<String, dynamic>> getProfile() async {
     if (_currentUserId == null || _authToken == null) {
-      return {
-        'success': false,
-        'error': "User not logged in"
-      };
+      return {'success': false, 'error': "User not logged in"};
     }
 
     try {
@@ -486,19 +510,16 @@ static Future<List<Medicine>> scanPrescription(String imagePath) async {
         return {
           'success': true,
           'user': user,
-          'message': 'Profile retrieved successfully'
+          'message': 'Profile retrieved successfully',
         };
       } else {
         return {
           'success': false,
-          'error': data['error'] ?? "Failed to get profile"
+          'error': data['error'] ?? "Failed to get profile",
         };
       }
     } catch (e) {
-      return {
-        'success': false,
-        'error': "Network error: $e"
-      };
+      return {'success': false, 'error': "Network error: $e"};
     }
   }
 

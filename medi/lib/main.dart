@@ -112,7 +112,7 @@ class MyApp extends StatelessWidget {
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
           return MaterialApp(
-            title: 'MedCare',
+            title: 'MediScan',
             debugShowCheckedModeBanner: false,
             theme: themeProvider.themeData,
             initialRoute: AppRoutes.splash,
