@@ -5,7 +5,8 @@ import '../models/user.dart';
 import '../models/order.dart';
 
 class ApiService {
-  static const String baseUrl = "https://9f3ad419f2a5.ngrok-free.app/api";
+  // static const String baseUrl = "https://9f3ad419f2a5.ngrok-free.app/api";
+  static const String baseUrl = "https://2f3cdbe5a59a.ngrok-free.app/api";
 
   static String? _currentUserId;
   static String? _authToken;
